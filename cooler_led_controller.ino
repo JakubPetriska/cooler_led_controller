@@ -1,7 +1,9 @@
 #include "FastLED.h"
 #include <IRremote.h>
 
-#define IR_RECEIVE_PIN  7
+#define IR_RECEIVE_PIN  2
+
+#define LED_PIN  6
 
 #define NUM_LEDS 44
 
@@ -42,6 +44,12 @@ int colorB = 255;
 bool isModeRainbow = false;
 int rainbowHue = 0;
 
+const int STROBE_PERIOD = 40;
+
+bool isModeStrobe = false;
+int strobeProgress = 0;
+float strobeBrightness = 0;
+
 void progressRainbow() {
   rainbowHue += 1;
   if (rainbowHue > 255) {
@@ -52,12 +60,29 @@ void progressRainbow() {
   FastLED.show();
 }
 
+void progressStrobe() {
+  strobeProgress += 1;
+
+  if (strobeProgress == STROBE_PERIOD) {
+    if (strobeBrightness < 0.5) {
+      strobeBrightness = 1;
+    }
+    else {
+      strobeBrightness = 0;
+    }
+
+    strobeProgress = 0;
+
+    writeColor(strobeBrightness);
+  }
+}
+
 int applyBrightness(int color, float brightness)
 {
     return min(max(round(color * brightness), 0), 255);
 }
 
-void writeColor()
+void writeColor(float brightness)
 {
     fill_solid(leds, NUM_LEDS, CRGB(applyBrightness(colorR, brightness), applyBrightness(colorG, brightness), applyBrightness(colorB, brightness)));
     FastLED.show();
@@ -66,6 +91,7 @@ void writeColor()
 void setColor(int r, int g, int b, float brightness)
 {
     isModeRainbow = false;
+    isModeStrobe = false;
     colorR = r;
     colorG = g;
     colorB = b;
@@ -91,114 +117,126 @@ void processRemoteCommand()
       if (IrReceiver.decodedIRData.command == COMMAND_BRIGHTNESS_UP)
       {
           brightness = max(min(brightness + BRIGHTNESS_STEP, 1), 0);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_BRIGHTNESS_DOWN)
       {
           brightness = max(min(brightness - BRIGHTNESS_STEP, 1), 0);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_ON)
       {
           brightness = 1;
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_OFF)
       {
           brightness = 0;
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_RED)
       {
           setColor(255, 0, 0, 1);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_RED_1)
       {
           setColor(255, 146, 99, 1);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_RED_2)
       {
           setColor(255, 96, 28, 1);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_RED_3)
       {
           setColor(250, 170, 135, 1);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_RED_4)
       {
           setColor(255, 255, 0, 1);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_GREEN)
       {
           setColor(0, 255, 0, 1);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_GREEN_1)
       {
           setColor(148, 255, 148, 1);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_GREEN_2)
       {
           setColor(122, 255, 244, 1);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_GREEN_3)
       {
           setColor(17, 168, 191, 1);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_GREEN_4)
       {
           setColor(0, 91, 105, 1);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_BLUE)
       {
           setColor(0, 0, 255, 1);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_BLUE_1)
       {
           setColor(62, 116, 250, 1);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_BLUE_2)
       {
           setColor(153, 0, 255, 1);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_BLUE_3)
       {
           setColor(125, 0, 46, 1);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_BLUE_4)
       {
           setColor(247, 126, 241, 1);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_WHITE)
       {
           setColor(255, 255, 255, 1);
-          writeColor();
+          writeColor(brightness);
       }
       else if (IrReceiver.decodedIRData.command == COMMAND_SMOOTH)
       {
         isModeRainbow = true;
+        isModeStrobe = false;
+      }
+      else if (IrReceiver.decodedIRData.command == COMMAND_STROBE)
+      {
+        isModeStrobe = true;
+        isModeRainbow = false;
       }
 
       delay(1);
 
       IrReceiver.resume();
-    } else if (IrReceiver.isIdle() && isModeRainbow)
+    } 
+    else if (IrReceiver.isIdle() && isModeRainbow)
     {
       progressRainbow();
+      delay(1);
+    } 
+    else if (IrReceiver.isIdle() && isModeStrobe)
+    {
+      progressStrobe();
       delay(1);
     }
 }
@@ -206,7 +244,7 @@ void processRemoteCommand()
 void setup() {
   Serial.begin(9600);
 
-  FastLED.addLeds<NEOPIXEL, 6>(leds, NUM_LEDS);
+  FastLED.addLeds<NEOPIXEL, LED_PIN>(leds, NUM_LEDS);
 
   Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_IRREMOTE));
 
